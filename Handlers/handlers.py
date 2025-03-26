@@ -5,8 +5,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
-from Keyboards.keyboards import create_reply_keyboard, create_inline_keyboard
-
+from Keyboards.keyboards import create_reply_keyboard, create_inline_keyboard, back_button, collection_kb
+from Common.tools import show_bouquets_in_price_range
 from Common.dict_of_bouquets import flower_bouquets, get_occasion, get_price_range
 
 
@@ -58,92 +58,40 @@ async def get_estimated_cost(message: types.Message, state: FSMContext):
 @user_private_router.message(OrderFlower.estimated_cost, F.text.contains('свыше 2000'))
 async def get_above_2000(message: types.Message, state: FSMContext):
     await state.update_data(estimated_cost=message.text)
-    back_button = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text='Назад')],
-                  [KeyboardButton(text='Заказать консультацию')],
-                  [KeyboardButton(text='Посмотреть всю коллекцию')]],
-        resize_keyboard=True
-    )
-    for bouquet in flower_bouquets.values():
-        if bouquet['price_range'] == 'свыше 2000':
-            await message.answer(text=
-                                 f'Цена: {bouquet['price']}\n'
-                                 f'Описание: {bouquet['description']}\n'
-                                 f'Фотография: {bouquet['image']}\n',
-                                 reply_markup=create_inline_keyboard(bouquet['id'])
-                                 )
-
+    await show_bouquets_in_price_range(message,'свыше 2000')
     await message.answer(f"Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.", reply_markup=back_button)
+                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
+                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
 @user_private_router.message(OrderFlower.estimated_cost, F.text.contains('500'))
 async def get_under_500(message: types.Message, state: FSMContext):
     await state.update_data(estimated_cost=message.text)
-    back_button = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text='Назад')],
-                  [KeyboardButton(text='Заказать консультацию')],
-                  [KeyboardButton(text='Посмотреть всю коллекцию')]],
-        resize_keyboard=True
-    )
-    for bouquet in flower_bouquets.values():
-        if bouquet['price_range'] == 'до 500':
-            await message.answer(text=
-                                 f'Цена: {bouquet['price']}\n'
-                                 f'Описание: {bouquet['description']}\n'
-                                 f'Фотография: {bouquet['image']}\n',
-                                 reply_markup=create_inline_keyboard(bouquet['id'])
-                                 )
-
+    await show_bouquets_in_price_range(message,'до 500')
     await message.answer("Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.", reply_markup=back_button)
+                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
+                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
 @user_private_router.message(OrderFlower.estimated_cost, F.text.contains('1000'))
 async def get_under_1000(message: types.Message, state: FSMContext):
     await state.update_data(estimated_cost=message.text)
-    back_button = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text='Назад')],
-                  [KeyboardButton(text='Заказать консультацию')],
-                  [KeyboardButton(text='Посмотреть всю коллекцию')]],
-        resize_keyboard=True
-    )
-    for bouquet in flower_bouquets.values():
-        if bouquet['price_range'] == 'до 1000':
-            await message.answer(text=
-                                 f'Цена: {bouquet['price']}\n'
-                                 f'Описание: {bouquet['description']}\n'
-                                 f'Фотография: {bouquet['image']}\n',
-                                 reply_markup=create_inline_keyboard(bouquet['id'])
-                                 )
-
+    await show_bouquets_in_price_range(message,'до 1000')
     await message.answer("Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.", reply_markup=back_button)
+                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
+                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
 @user_private_router.message(OrderFlower.estimated_cost, F.text.contains('2000'))
 async def get_under_2000(message: types.Message, state: FSMContext):
     await state.update_data(estimated_cost=message.text)
-    back_button = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text='Назад')],
-                  [KeyboardButton(text='Заказать консультацию')],
-                  [KeyboardButton(text='Посмотреть всю коллекцию')]],
-        resize_keyboard=True
-    )
-    for bouquet in flower_bouquets.values():
-        if bouquet['price_range'] == 'до 2000':
-            await message.answer(text=
-                                 f'Цена: {bouquet['price']}\n'
-                                 f'Описание: {bouquet['description']}\n'
-                                 f'Фотография: {bouquet['image']}\n',
-                                 reply_markup=create_inline_keyboard(bouquet['id'])
-                                 )
-
+    await show_bouquets_in_price_range(message,'до 2000')
     await message.answer("Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.", reply_markup=back_button)
+                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
+                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
@@ -168,10 +116,6 @@ async def select_consultation(message: types.Message, state: FSMContext):
     await state.update_data(phone_number=message.text)
     number_phone = await state.get_data()
     await state.clear()
-    collection_kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text='Посмотреть всю коллекцию')]],
-        resize_keyboard=True
-    )
     await message.answer(f"Ваш номер: {number_phone['phone_number']}\n"
                          f"Флорист скоро свяжется с вами.\n"
                          f"А пока можете присмотреть что-нибудь из готовой коллекции",
@@ -195,7 +139,8 @@ async def get_choose_bouquet(message: types.Message, state: FSMContext):
 async def select_bouquet(callback: types.CallbackQuery, state: FSMContext):
     bouquet_id = callback.data.split('_')
     await state.update_data(bouquet=bouquet_id)
-    await callback.message.answer(f'Вы выбрали букет, введите своё имя', reply_markup=ReplyKeyboardRemove(remove_keyboard=True))
+    await callback.message.answer(f'Вы выбрали букет, введите своё имя',
+                                  reply_markup=ReplyKeyboardRemove(remove_keyboard=True))
     await callback.answer()
     await state.set_state(OrderFlower.name)
 
