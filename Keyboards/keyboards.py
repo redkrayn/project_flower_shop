@@ -18,9 +18,12 @@ def create_inline_keyboard(options):
 
 
 back_button = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text='Назад')],
-                  [KeyboardButton(text='Заказать консультацию')],
-                  [KeyboardButton(text='Посмотреть всю коллекцию')]],
+        keyboard=[
+                [KeyboardButton(text='Назад к выбору повода')],
+                [KeyboardButton(text='Назад к выбору цены')],
+                [KeyboardButton(text='Заказать консультацию')],
+                [KeyboardButton(text='Посмотреть всю коллекцию')]
+                ],
         resize_keyboard=True)
 
 
