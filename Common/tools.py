@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta
 from aiogram import types
+from dotenv import load_dotenv
+load_dotenv()
+import os
 import django
 from asgiref.sync import sync_to_async
+from aiogram.types import FSInputFile, InputFile
 
 django.setup()
 
@@ -17,53 +21,45 @@ def is_within_24_hours(delivery_date):
 
 async def show_bouquet_in_price_range(message: types.Message, price_range: str, event: str):
     bouquets = await sync_to_async(list)(Bouquet.objects.all())
-
     for bouquet in bouquets:
+        path_to_photo = os.getenv('PATH_TO_GET_IMAGE')
+        photo = FSInputFile(f'{path_to_photo}{bouquet.image}')
         if price_range == 'до 500' and bouquet.price <= 500 and bouquet.occasion == event:
-            await message.answer(
-                text=f'Цена: {bouquet.price}\n'
-                     f'Описание: {bouquet.description}\n'
-                     f'Фотография: {bouquet.image}\n',
-                reply_markup=create_inline_keyboard(bouquet.name)
-            )
+            await message.reply_photo(
+                photo=photo, caption=(f'Описание: {bouquet.description}\nЦена: {bouquet.price}\n'),
+                reply_markup=create_inline_keyboard(bouquet.name))
             return True
+
         elif price_range == 'до 1000' and 500 < bouquet.price <= 1000 and bouquet.occasion == event:
-            await message.answer(
-                text=f'Цена: {bouquet.price}\n'
-                     f'Описание: {bouquet.description}\n'
-                     f'Фотография: {bouquet.image}\n',
-                reply_markup=create_inline_keyboard(bouquet.name)
-            )
+            await message.reply_photo(
+                photo=photo, caption=(f'Описание: {bouquet.description}\nЦена: {bouquet.price}\n'),
+                reply_markup=create_inline_keyboard(bouquet.name))
             return True
+
         elif price_range == 'до 2000' and 1000 < bouquet.price <= 2000 and bouquet.occasion == event:
-            await message.answer(
-                text=f'Цена: {bouquet.price}\n'
-                     f'Описание: {bouquet.description}\n'
-                     f'Фотография: {bouquet.image}\n',
-                reply_markup=create_inline_keyboard(bouquet.name)
-            )
+            await message.reply_photo(
+                photo=photo, caption=(f'Описание: {bouquet.description}\nЦена: {bouquet.price}\n'),
+                reply_markup=create_inline_keyboard(bouquet.name))
             return True
+
         elif price_range == 'свыше 2000' and bouquet.price > 2000 and bouquet.occasion == event:
-            await message.answer(
-                text=f'Цена: {bouquet.price}\n'
-                     f'Описание: {bouquet.description}\n'
-                     f'Фотография: {bouquet.image}\n',
-                reply_markup=create_inline_keyboard(bouquet.name)
-            )
+            await message.reply_photo(
+                photo=photo, caption=(f'Описание: {bouquet.description}\nЦена: {bouquet.price}\n'),
+                reply_markup=create_inline_keyboard(bouquet.name))
             return True
 
 
 async def show_full_list_of_bouquets_in_price_range(message: types.Message, price_range: str, event: str):
     bouquets = await sync_to_async(list)(Bouquet.objects.all())
     for bouquet in bouquets:
+        path_to_photo = os.getenv('PATH_TO_GET_IMAGE')
+        photo = FSInputFile(f'{path_to_photo}{bouquet.image}')
+
         if ((price_range == 'до 500' or 'до 1000' or 'до 2000') and bouquet.price <= 2000 and bouquet.occasion == event) or \
             (price_range == 'свыше 2000' and bouquet.price > 2000 and bouquet.occasion == event):
-            await message.answer(
-                text=f'Цена: {bouquet.price}\n'
-                     f'Описание: {bouquet.description}\n'
-                     f'Фотография: {bouquet.image}\n',
-                reply_markup=create_inline_keyboard(bouquet.name)
-            )
+            await message.reply_photo(
+                photo=photo, caption=(f'Описание: {bouquet.description}\nЦена: {bouquet.price}\n'),
+                reply_markup=create_inline_keyboard(bouquet.name))
     return True
 
 
