@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import django
 from asgiref.sync import sync_to_async
 django.setup()
@@ -14,6 +16,8 @@ from Keyboards.keyboards import create_reply_keyboard, create_inline_keyboard, b
 from Common.tools import get_price_range, get_occasion_bouquets, show_full_list_of_bouquets_in_price_range, \
     show_bouquet_in_price_range, get_order_price_by_title
 
+
+load_dotenv()
 user_private_router = Router()
 
 
@@ -185,8 +189,13 @@ async def get_user_info_delivery(message: types.Message, state: FSMContext):
     bouquet_title = (data['bouquet'][0])[7:]
     order_price = await get_order_price_by_title(bouquet_title)
     title_of_bouquet = await sync_to_async(Bouquet.objects.get)(name=bouquet_title)
-    order = Order(customer=data['name'], order_price = order_price, delivery_address = data['address'],
-                  customer_chat_id = message.from_user.id, flower_name = title_of_bouquet, delivery_date = data['delivery'])
+    order = Order(customer=data['name'], order_price = order_price,
+                  delivery_address = data['address'],
+                  customer_chat_id = message.from_user.id,
+                  flower_name = title_of_bouquet,
+                  delivery_date = data['delivery'],)
     await sync_to_async(order.save)()
+    florist_id = os.getenv('FLORIST_ID')
+    await message.bot.send_message(chat_id=florist_id, text=str(data))
     await message.answer(f'Заказ принят🤙')
     await state.clear()
