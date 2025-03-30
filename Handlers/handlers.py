@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import django
 from asgiref.sync import sync_to_async
 django.setup()
-
 from aiogram import types, Router, F
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, StateFilter, Command
@@ -12,10 +11,9 @@ from aiogram.types import ReplyKeyboardRemove
 
 from FlowerShop.models import Bouquet, Order
 from States.states import OrderFlower, GetConsultation
-from Keyboards.keyboards import create_reply_keyboard, create_inline_keyboard, back_button, collection_kb
+from Keyboards.keyboards import create_reply_keyboard, collection_kb
 from Common.tools import get_price_range, get_occasion_bouquets, show_full_list_of_bouquets_in_price_range, \
-    show_bouquet_in_price_range, get_order_price_by_title
-
+    show_bouquet_in_price_range, get_order_price_by_title, is_valid_russian_phone
 
 load_dotenv()
 user_private_router = Router()
@@ -37,7 +35,7 @@ async def cmd_feedback(message: types.Message):
     await message.answer(
         'Для отзывов по работе сервиса и получению информации о времени доставки можно обратиться:\n'
              '<b>Телефон</b> : +7123456789\n'
-             '<b>TG</b> : @abvgd\n' 
+             '<b>TG</b> : @abvgd\n'
              '<b>Email</b> : support@gmail.com',
         parse_mode=ParseMode.HTML)
 
@@ -64,9 +62,6 @@ async def get_above_2000(message: types.Message, state: FSMContext):
     data = await state.get_data()
     event = data.get('event')
     await show_bouquet_in_price_range(message,'свыше 2000', event)
-    await message.answer(f"Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
-                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
@@ -76,9 +71,6 @@ async def get_under_500(message: types.Message, state: FSMContext):
     data = await state.get_data()
     event = data.get('event')
     await show_bouquet_in_price_range(message,'до 500', event)
-    await message.answer("Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
-                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
@@ -88,9 +80,6 @@ async def get_under_1000(message: types.Message, state: FSMContext):
     data = await state.get_data()
     event = data.get('event')
     await show_bouquet_in_price_range(message,'до 1000', event)
-    await message.answer("Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
-                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
@@ -100,9 +89,6 @@ async def get_under_2000(message: types.Message, state: FSMContext):
     data = await state.get_data()
     event = data.get('event')
     await show_bouquet_in_price_range(message,'до 2000', event)
-    await message.answer("Выберите букет. Если хотите что-то еще более уникальное,\n"
-                         f"подберите другой букет из нашей коллекции или закажите консультацию флориста.",
-                         reply_markup=back_button)
     await state.set_state(OrderFlower.bouquet)
 
 
@@ -126,7 +112,7 @@ async def go_back(message: types.Message, state: FSMContext):
 async def choose_consultation(message: types.Message, state: FSMContext):
     await message.answer("Вы выбрали консультацию флориста.\n"
                          "В течении 20 минут вам перезвонит первый свободный флорист.\n"
-                         "Введите ваш номер телефона",
+                         "Введите ваш номер телефона (формата 8XXXXXXXXXX",
                          reply_markup=ReplyKeyboardRemove(remove_keyboard=True))
     await state.set_state(GetConsultation.phone_number)
 
@@ -134,12 +120,21 @@ async def choose_consultation(message: types.Message, state: FSMContext):
 @user_private_router.message(GetConsultation.phone_number, F.text)
 async def select_consultation(message: types.Message, state: FSMContext):
     await state.update_data(phone_number=message.text)
-    number_phone = await state.get_data()
-    await message.answer(f"Ваш номер: {number_phone['phone_number']}\n"
-                         f"Флорист скоро свяжется с вами.\n"
-                         f"А пока можете присмотреть что-нибудь из готовой коллекции",
-                         reply_markup=collection_kb)
-    await state.set_state(OrderFlower.bouquet)
+    data_consultation_cls = await state.get_data()
+    user_phone_number_in_str = data_consultation_cls['phone_number']
+    if is_valid_russian_phone(user_phone_number_in_str):
+        number_phone = await state.get_data()
+        await message.answer(f"Ваш номер: {user_phone_number_in_str}\n"
+                             f"Флорист скоро свяжется с вами.\n"
+                             f"А пока можете присмотреть что-нибудь из готовой коллекции",
+                             reply_markup=collection_kb)
+        florist_id = os.getenv('FLORIST_ID')
+        send_to_florist = (f'Консультация. Номер телефона заказчика: {number_phone['phone_number']}')
+        await message.bot.send_message(chat_id=florist_id, text=send_to_florist)
+        await state.set_state(OrderFlower.bouquet)
+    else:
+        await message.answer(f"Введите корректный номер телефона")
+        await state.set_state(GetConsultation.phone_number)
 
 
 @user_private_router.message(OrderFlower.bouquet, F.text.contains('Посмотреть всю коллекцию'))
@@ -171,15 +166,21 @@ async def get_user_info_name(message: types.Message, state: FSMContext):
 @user_private_router.message(OrderFlower.address, F.text)
 async def get_user_info_address(message: types.Message, state: FSMContext):
     await state.update_data(address=message.text)
-    await message.answer('Введите номер телефона')
+    await message.answer('Введите номер телефона (формата 8ХХХХХХХХХХ)')
     await state.set_state(OrderFlower.phone_number)
 
 
 @user_private_router.message(OrderFlower.phone_number, F.text)
 async def get_user_info_number(message: types.Message, state: FSMContext):
     await state.update_data(phone_number=message.text)
-    await message.answer('Введите дату доставки в формате ДД.ММ.ГГ ЧЧ:ММ:')
-    await state.set_state(OrderFlower.delivery)
+    data_orderflower_cls = await state.get_data()
+    user_phone_number_in_str = data_orderflower_cls['phone_number']
+    if is_valid_russian_phone(user_phone_number_in_str):
+        await message.answer('Введите дату доставки в формате ДД.ММ.ГГ ЧЧ:ММ:')
+        await state.set_state(OrderFlower.delivery)
+    else:
+        await message.answer(f"Введите корректный номер телефона")
+        await state.set_state(OrderFlower.phone_number)
 
 
 @user_private_router.message(OrderFlower.delivery, F.text)
@@ -189,13 +190,20 @@ async def get_user_info_delivery(message: types.Message, state: FSMContext):
     bouquet_title = (data['bouquet'][0])[7:]
     order_price = await get_order_price_by_title(bouquet_title)
     title_of_bouquet = await sync_to_async(Bouquet.objects.get)(name=bouquet_title)
-    order = Order(customer=data['name'], order_price = order_price,
+    order = Order(customer=data['name'],
+                  order_price = order_price,
                   delivery_address = data['address'],
                   customer_chat_id = message.from_user.id,
                   flower_name = title_of_bouquet,
                   delivery_date = data['delivery'],)
     await sync_to_async(order.save)()
-    florist_id = os.getenv('FLORIST_ID')
-    await message.bot.send_message(chat_id=florist_id, text=str(data))
+    courier_id = os.getenv('COURIER_ID')
+    send_to_florist = (f'Заказчик: {data['name']}.\n'
+                       f'Адрес: {data['address']}.\n'
+                       f'Название букета: {title_of_bouquet}.\n'
+                       f'Дата доставки: {data['delivery']}\n'
+                       f'Стоимость: {order_price}\n'
+                       f'Номер телефона: {data['phone_number']}')
+    await message.bot.send_message(chat_id=courier_id, text=send_to_florist)
     await message.answer(f'Заказ принят🤙')
     await state.clear()
