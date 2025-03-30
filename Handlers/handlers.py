@@ -13,7 +13,7 @@ from FlowerShop.models import Bouquet, Order
 from States.states import OrderFlower, GetConsultation
 from Keyboards.keyboards import create_reply_keyboard, collection_kb
 from Common.tools import get_price_range, get_occasion_bouquets, show_full_list_of_bouquets_in_price_range, \
-    show_bouquet_in_price_range, get_order_price_by_title, is_valid_russian_phone
+    show_bouquet_in_price_range, get_order_price_by_title, is_valid_russian_phone, price_does_not_matter
 
 load_dotenv()
 user_private_router = Router()
@@ -62,6 +62,13 @@ async def get_above_2000(message: types.Message, state: FSMContext):
     data = await state.get_data()
     event = data.get('event')
     await show_bouquet_in_price_range(message,'свыше 2000', event)
+    await state.set_state(OrderFlower.bouquet)
+
+
+@user_private_router.message(OrderFlower.estimated_cost, F.text.contains('Не важно'))
+async def get_above_2000(message: types.Message, state: FSMContext):
+    await state.update_data(estimated_cost=message.text)
+    await price_does_not_matter(message)
     await state.set_state(OrderFlower.bouquet)
 
 
@@ -122,6 +129,7 @@ async def select_consultation(message: types.Message, state: FSMContext):
     await state.update_data(phone_number=message.text)
     data_consultation_cls = await state.get_data()
     user_phone_number_in_str = data_consultation_cls['phone_number']
+
     if is_valid_russian_phone(user_phone_number_in_str):
         number_phone = await state.get_data()
         await message.answer(f"Ваш номер: {user_phone_number_in_str}\n"
@@ -132,6 +140,7 @@ async def select_consultation(message: types.Message, state: FSMContext):
         send_to_florist = (f'Консультация. Номер телефона заказчика: {number_phone['phone_number']}')
         await message.bot.send_message(chat_id=florist_id, text=send_to_florist)
         await state.set_state(OrderFlower.bouquet)
+
     else:
         await message.answer(f"Введите корректный номер телефона")
         await state.set_state(GetConsultation.phone_number)
@@ -175,9 +184,11 @@ async def get_user_info_number(message: types.Message, state: FSMContext):
     await state.update_data(phone_number=message.text)
     data_orderflower_cls = await state.get_data()
     user_phone_number_in_str = data_orderflower_cls['phone_number']
+
     if is_valid_russian_phone(user_phone_number_in_str):
         await message.answer('Введите дату доставки в формате ДД.ММ.ГГ ЧЧ:ММ:')
         await state.set_state(OrderFlower.delivery)
+
     else:
         await message.answer(f"Введите корректный номер телефона")
         await state.set_state(OrderFlower.phone_number)
@@ -186,6 +197,7 @@ async def get_user_info_number(message: types.Message, state: FSMContext):
 @user_private_router.message(OrderFlower.delivery, F.text)
 async def get_user_info_delivery(message: types.Message, state: FSMContext):
     await state.update_data(delivery=message.text)
+
     data = await state.get_data()
     bouquet_title = (data['bouquet'][0])[7:]
     order_price = await get_order_price_by_title(bouquet_title)
@@ -197,13 +209,15 @@ async def get_user_info_delivery(message: types.Message, state: FSMContext):
                   flower_name = title_of_bouquet,
                   delivery_date = data['delivery'],)
     await sync_to_async(order.save)()
+
     courier_id = os.getenv('COURIER_ID')
-    send_to_florist = (f'Заказчик: {data['name']}.\n'
+    send_to_courier = (f'Заказчик: {data['name']}.\n'
                        f'Адрес: {data['address']}.\n'
                        f'Название букета: {title_of_bouquet}.\n'
                        f'Дата доставки: {data['delivery']}\n'
                        f'Стоимость: {order_price}\n'
                        f'Номер телефона: {data['phone_number']}')
-    await message.bot.send_message(chat_id=courier_id, text=send_to_florist)
+    await message.bot.send_message(chat_id=courier_id, text=send_to_courier)
+
     await message.answer(f'Заказ принят🤙')
     await state.clear()
