@@ -26,7 +26,6 @@ back_button = ReplyKeyboardMarkup(
                 ],
         resize_keyboard=True)
 
-
 collection_kb = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text='Посмотреть всю коллекцию')]],
         resize_keyboard=True)
