@@ -6,4 +6,4 @@ Django==4.2.20
 django-phonenumber-field==8.0.0
 phonenumbers==9.0.1
 pillow==11.1.0
-
+django-phone-verify==0.1.1
