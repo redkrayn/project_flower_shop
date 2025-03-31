@@ -1,4 +1,6 @@
 import os
+
+import aiogram.exceptions
 from dotenv import load_dotenv
 import django
 from asgiref.sync import sync_to_async
@@ -210,6 +212,7 @@ async def get_user_info_delivery(message: types.Message, state: FSMContext):
                   delivery_date = data['delivery'],)
     await sync_to_async(order.save)()
 
+    default_courier_id = os.getenv('DEFAULT_ID')
     courier_id = os.getenv('COURIER_ID')
     send_to_courier = (f'Заказчик: {data['name']}.\n'
                        f'Адрес: {data['address']}.\n'
@@ -217,7 +220,9 @@ async def get_user_info_delivery(message: types.Message, state: FSMContext):
                        f'Дата доставки: {data['delivery']}\n'
                        f'Стоимость: {order_price}\n'
                        f'Номер телефона: {data['phone_number']}')
-    await message.bot.send_message(chat_id=courier_id, text=send_to_courier)
-
+    try:
+        await message.bot.send_message(chat_id=courier_id, text=send_to_courier)
+    except aiogram.exceptions.TelegramBadRequest:
+        await message.bot.send_message(chat_id=default_courier_id, text=send_to_courier)
     await message.answer(f'Заказ принят🤙')
     await state.clear()
